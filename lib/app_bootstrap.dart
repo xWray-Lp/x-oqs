@@ -57,6 +57,7 @@ class _XoqsBootstrapAppState extends State<XoqsBootstrapApp> {
   }
 
   Future<void> _initCore() async {
+    // AudioSession: hata devam etse bile ilerle
     try {
       final session = await AudioSession.instance;
       await session.configure(const AudioSessionConfiguration.music());
@@ -64,27 +65,39 @@ class _XoqsBootstrapAppState extends State<XoqsBootstrapApp> {
       developer.log('AudioSession configure failed (continuing)', error: e, stackTrace: st);
     }
 
+    // Cache ve servisleri hazırla
     final cache = await CacheService.open();
     final yt = YoutubeMusicService(cache);
     final sponsor = SponsorBlockService();
 
-    late final XoqsAudioHandler xoqsHandler;
-    await AudioService.init(
-      builder: () {
-        xoqsHandler = XoqsAudioHandler(
-          youtube: yt,
-          cache: cache,
-          sponsorBlock: sponsor,
-        );
-        return xoqsHandler;
-      },
-      config: const AudioServiceConfig(
-        androidNotificationChannelId: 'com.xoqs.audio',
-        androidNotificationChannelName: 'X-oqS',
-        androidNotificationOngoing: true,
-        androidStopForegroundOnPause: true,
-      ),
-    );
+    // AudioService başlatımı - hata durumunda fallback ile devam et
+    XoqsAudioHandler? xoqsHandler;
+    try {
+      await AudioService.init(
+        builder: () {
+          xoqsHandler = XoqsAudioHandler(
+            youtube: yt,
+            cache: cache,
+            sponsorBlock: sponsor,
+          );
+          return xoqsHandler!;
+        },
+        config: const AudioServiceConfig(
+          androidNotificationChannelId: 'com.xoqs.audio',
+          androidNotificationChannelName: 'X-oqS',
+          androidNotificationOngoing: true,
+          androidStopForegroundOnPause: true,
+        ),
+      );
+    } catch (e, st) {
+      developer.log('AudioService init failed (continuing without background audio)', error: e, stackTrace: st);
+      // Fallback: handler'ı manuel oluştur ama AudioService olmadan
+      xoqsHandler = XoqsAudioHandler(
+        youtube: yt,
+        cache: cache,
+        sponsorBlock: sponsor,
+      );
+    }
 
     if (!mounted) return;
     runApp(
@@ -92,7 +105,7 @@ class _XoqsBootstrapAppState extends State<XoqsBootstrapApp> {
         overrides: [
           cacheProvider.overrideWith((ref) => cache),
           youtubeProvider.overrideWith((ref) => yt),
-          audioHandlerProvider.overrideWith((ref) => xoqsHandler),
+          audioHandlerProvider.overrideWith((ref) => xoqsHandler!),
         ],
         child: const XoqsApp(),
       ),
