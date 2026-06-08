@@ -20,17 +20,20 @@ jobs:
           cache: true
       - name: Flutter pub get
         run: flutter pub get
-      - name: Build APK
+      - name: Generate gradlew
+        run: |
+          flutter build apk --release || true
+          ls android/
+      - name: Fix gradlew permissions
+        run: chmod +x android/gradlew
+      - name: Build APK via gradlew
         run: |
           cd android
           ./gradlew assembleRelease
-      - name: Copy APK
-        run: |
-          mkdir -p build/app/outputs/flutter-apk
-          find . -name "app-release.apk" | head -5
-          cp android/app/build/outputs/apk/release/app-release.apk build/app/outputs/flutter-apk/app-release.apk
+      - name: Find and upload APK
+        run: find . -name "*.apk" | grep -v test
       - uses: actions/upload-artifact@v4
         with:
           name: app-release
-          path: build/app/outputs/flutter-apk/app-release.apk
+          path: android/app/build/outputs/apk/release/app-release.apk
           retention-days: 30
