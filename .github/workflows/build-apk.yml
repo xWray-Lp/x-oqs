@@ -18,10 +18,15 @@ jobs:
         with:
           channel: 'stable'
           cache: true
-      - run: flutter pub get
-      - run: flutter build apk --release
+      - name: Flutter pub get
+        run: flutter pub get
+      - name: Build APK
+        run: flutter build apk --release 2>&1
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
-          name: app-release.apk
-          path: build/app/outputs/flutter-apk/app-release.apk
+          name: app-release
+          path: |
+            build/app/outputs/flutter-apk/app-release.apk
+            build/app/outputs/
           retention-days: 30
