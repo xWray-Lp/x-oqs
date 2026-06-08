@@ -21,12 +21,16 @@ jobs:
       - name: Flutter pub get
         run: flutter pub get
       - name: Build APK
-        run: flutter build apk --release 2>&1
+        run: |
+          cd android
+          ./gradlew assembleRelease
+      - name: Copy APK
+        run: |
+          mkdir -p build/app/outputs/flutter-apk
+          find . -name "app-release.apk" | head -5
+          cp android/app/build/outputs/apk/release/app-release.apk build/app/outputs/flutter-apk/app-release.apk
       - uses: actions/upload-artifact@v4
-        if: always()
         with:
           name: app-release
-          path: |
-            build/app/outputs/flutter-apk/app-release.apk
-            build/app/outputs/
+          path: build/app/outputs/flutter-apk/app-release.apk
           retention-days: 30
